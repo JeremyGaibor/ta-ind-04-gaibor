@@ -1,0 +1,664 @@
+\documentclass[12pt,a4paper]{article}
+
+% Paquetes
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{siunitx}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage[hidelinks]{hyperref}
+\usepackage{url}
+
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
+\pgfplotsset{compat=1.18}
+
+\graphicspath{{../figuras/}}
+
+\sisetup{
+    output-decimal-marker = {,},
+    group-separator = {.},
+    group-minimum-digits = 4
+}
+
+% Bibliografía
+\usepackage[
+    backend=biber,
+    style=ieee,
+    sorting=none
+]{biblatex}
+
+\addbibresource{references.bib}
+
+\begin{document}
+
+% Portada
+\begin{titlepage}
+    \centering
+
+    {\Large\textbf{UNIVERSIDAD TÉCNICA ESTATAL DE QUEVEDO}\par}
+    \vspace{0.4cm}
+
+    {\large Facultad de Ciencias de la Computación\par}
+    {\large Carrera de Ingeniería de Software\par}
+
+    \vfill
+
+    {\Large\textbf{TA-IND-04}\par}
+    \vspace{0.4cm}
+
+    {\LARGE\textbf{Análisis de Rendimiento Paralelo aplicado al Proyecto Fin de Curso}\par}
+
+    \vfill
+
+    \begin{flushleft}
+        \textbf{Asignatura:} Aplicaciones Distribuidas (ISR-701)\\[0.2cm]
+        \textbf{Unidad:} Unidad 4 -- Cómputo Paralelo y Distribuido\\[0.2cm]
+        \textbf{Estudiante:} Jeremy Ruperto Gaibor Rodríguez\\[0.2cm]
+        \textbf{Equipo PE-U4:} Equipo C\\[0.2cm]
+        \textbf{PFC de referencia:} Tienda Tech\\[0.2cm]
+        \textbf{Transformación foco:} T1 -- Filtrado y selección\\[0.2cm]
+        \textbf{Período académico:} 2026--2027 PPA\\[0.2cm]
+        \textbf{Docente:} Gleiston C. Guerrero-Ulloa, M.Sc.\\[0.2cm]
+        \textbf{Repositorio individual:}\\
+        \url{AQUI_VA_LA_URL_DE_TU_REPOSITORIO}\\[0.2cm]
+        \textbf{Fecha:} Agosto de 2026
+    \end{flushleft}
+
+    \vfill
+\end{titlepage}
+
+% Introducción
+\section{Introducción y contexto}
+
+El procesamiento paralelo y distribuido permite repartir una carga de trabajo
+entre varias unidades de cómputo. Sin embargo, aumentar la cantidad de recursos
+no garantiza una reducción proporcional del tiempo de ejecución. En Apache
+Spark, la cantidad de executors constituye un parámetro relevante y una
+asignación inadecuada puede producir un uso poco eficiente de los recursos o
+un mayor tiempo de ejecución \cite{sen2021}. Asimismo, el ajuste de los
+parámetros de configuración de Spark constituye un problema de optimización
+que depende de las características de cada aplicación \cite{cheng2021}.
+
+El presente informe analiza de manera individual los resultados obtenidos en la
+práctica PE-U4. En el experimento se implementaron cinco transformaciones
+equivalentes mediante pandas y PySpark sobre un conjunto sintético de
+\num{500000} solicitudes y 14 columnas. Para cada configuración se realizaron
+cinco repeticiones y se utilizó la mediana como tiempo representativo. Antes de
+las repeticiones registradas se descartó una ejecución inicial de calentamiento.
+
+La transformación seleccionada como foco individual es T1, correspondiente al
+filtrado y selección. Esta operación procesa los \num{500000} registros de
+entrada y produce \num{33117} registros como resultado.
+
+Los datos utilizados son trazables al repositorio PE-U4 del Equipo C:
+
+\begin{center}
+\url{https://github.com/ffarinangog2/pe-u4-spark-equipo-c}
+\end{center}
+
+\noindent
+Las mediciones adicionales de T1 con uno y dos executors se incorporaron en el
+commit \texttt{6b363ab}. Los resultados se encuentran registrados en
+\texttt{resultados/tiempos\_crudos.csv} y
+\texttt{resultados/tiempos\_resumen.csv}.
+
+El entorno documentado en el proyecto utiliza PySpark 3.5.0, Python 3.12.10,
+OpenJDK 17.0.20 y Windows 11. Spark fue ejecutado en modo Standalone con el
+master \texttt{spark://127.0.0.1:7077}. Cada executor fue configurado con un
+core y \SI{512}{\mebi\byte} de memoria. Además, el número de particiones, el
+paralelismo por defecto y el máximo de cores se ajustaron al número de
+executors utilizado en cada configuración.
+
+% Análisis de speedup
+\section{Análisis propio de los resultados de speedup}
+\label{sec:speedup}
+
+La comparación general entre pandas y PySpark utiliza el tiempo mediano de
+pandas y el tiempo obtenido por Spark con cuatro executors. El speedup se
+determina mediante:
+
+\[
+S=
+\frac{T_{\text{pandas}}}
+{T_{\text{spark}}}.
+\]
+
+La Tabla~\ref{tab:general} resume los resultados de las cinco transformaciones.
+
+\begin{table}[H]
+\centering
+\caption{Resultados generales de PE-U4 con cuatro executors.}
+\label{tab:general}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Transf.} &
+\textbf{$T_{\text{pandas}}$ (s)} &
+\textbf{$T_{\text{spark}}$ (s)} &
+\textbf{$S$} &
+\textbf{$E$} \\
+\midrule
+T1 & 0.2119435 & 0.3456639 & 0.6131 & 0.1533 \\
+T2 & 0.1171350 & 0.6874908 & 0.1704 & 0.0426 \\
+T3 & 0.2888583 & 0.8657363 & 0.3337 & 0.0834 \\
+T4 & 2.2658870 & 1.8100053 & 1.2519 & 0.3130 \\
+T5 & 1.5252129 & 1.3564848 & 1.1244 & 0.2811 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Los resultados muestran que T4 y T5 alcanzaron un speedup superior a uno,
+mientras que T1, T2 y T3 fueron más rápidas mediante pandas. En el caso de T1
+se obtuvo un speedup de \num{0.6131}, por lo que la ejecución de Spark con
+cuatro executors necesitó más tiempo que pandas.
+
+Este resultado no es inesperado en un motor distribuido. Sen et al. muestran
+que distintas consultas de Spark pueden requerir niveles diferentes de
+paralelismo y que incrementar la cantidad de executors no garantiza siempre
+una reducción del tiempo de ejecución \cite{sen2021}. Por su parte, Cheng
+et al. estudian el ajuste de parámetros de Spark como un problema de
+optimización dependiente de la carga de trabajo \cite{cheng2021}.
+
+\subsection{Escalado de T1}
+
+Para estudiar el escalado de T1 se toma como referencia la ejecución Spark con
+un executor:
+
+\[
+T_1=\SI{0.3134846}{\second}.
+\]
+
+Los resultados obtenidos fueron los siguientes:
+
+\begin{table}[H]
+\centering
+\caption{Escalado experimental de T1.}
+\label{tab:escalado}
+\begin{tabular}{rrrr}
+\toprule
+\textbf{$N$} &
+\textbf{$T_N$ (s)} &
+\textbf{$S(N)$} &
+\textbf{$E(N)$} \\
+\midrule
+1 & 0.3134846 & 1.0000 & 1.0000 \\
+2 & 0.8624843 & 0.3635 & 0.1817 \\
+4 & 0.3456639 & 0.9069 & 0.2267 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Para dos executors, el speedup es:
+
+\begin{align}
+S(2)
+&=
+\frac{T_1}{T_2} \\
+&=
+\frac{0.3134846}{0.8624843} \\
+&=
+0.3635.
+\end{align}
+
+Para cuatro executors:
+
+\begin{align}
+S(4)
+&=
+\frac{T_1}{T_4} \\
+&=
+\frac{0.3134846}{0.3456639} \\
+&=
+0.9069.
+\end{align}
+
+En ninguna de las configuraciones se obtuvo una aceleración respecto de la
+ejecución con un solo executor. La configuración con dos executors presentó el
+peor resultado.
+
+Sus cinco tiempos fueron \SI{0.8624843}{\second},
+\SI{0.3758325}{\second}, \SI{1.1714799}{\second},
+\SI{0.2754539}{\second} y \SI{1.4906592}{\second}. La diferencia entre el
+menor y el mayor valor evidencia una variabilidad considerable en esta
+configuración.
+
+\subsection{Contraste con la Ley de Amdahl}
+
+La Ley de Amdahl establece el límite del speedup que puede alcanzarse cuando
+una fracción $p$ de un programa puede ejecutarse en paralelo
+\cite{amdahl1967}:
+
+\begin{equation}
+S(N)=
+\frac{1}
+{(1-p)+\dfrac{p}{N}},
+\qquad
+S_{\max}=
+\frac{1}{1-p}.
+\label{eq:amdahl}
+\end{equation}
+
+El experimento no midió de forma independiente la fracción paralelizable $p$.
+Por ello, se utiliza $p=1$ únicamente como una referencia ideal superior, es
+decir, como el caso en el que no existe fracción serial ni sobrecarga. Esta
+elección no implica afirmar que T1 sea completamente paralelizable durante una
+ejecución real.
+
+Bajo esa referencia ideal:
+
+\[
+S_{\text{teo}}(N)=N.
+\]
+
+Para dos executors, la desviación relativa entre el valor medido y la
+referencia ideal es:
+
+\begin{align}
+\Delta_2
+&=
+\frac{S_{\text{med}}-S_{\text{teo}}}
+{S_{\text{teo}}}
+\times100 \\
+&=
+\frac{0.3635-2}{2}\times100 \\
+&=
+-81.83\%.
+\end{align}
+
+Para cuatro executors:
+
+\begin{align}
+\Delta_4
+&=
+\frac{0.9069-4}{4}\times100 \\
+&=
+-77.33\%.
+\end{align}
+
+Por tanto, los resultados experimentales se encuentran claramente por debajo
+del límite ideal de Amdahl. El speedup real es incluso menor que uno para las
+dos configuraciones.
+
+Esto no contradice la Ley de Amdahl. La expresión representa un límite teórico
+y no incorpora la sobrecarga introducida por un motor distribuido real. En
+Spark existe trabajo adicional relacionado con la creación, planificación y
+coordinación de las tareas.
+
+\begin{figure}[H]
+\centering
+
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.82\textwidth,
+    height=7.5cm,
+    xlabel={Número de executors $N$},
+    ylabel={Speedup $S(N)$},
+    xtick={1,2,4},
+    grid=major,
+    legend pos=north west
+]
+
+\addplot[
+    mark=*,
+    thick
+]
+coordinates {
+    (1,1)
+    (2,2)
+    (4,4)
+};
+\addlegendentry{Amdahl ideal ($p=1$)}
+
+\addplot[
+    mark=square*,
+    thick
+]
+coordinates {
+    (1,1)
+    (2,0.3635)
+    (4,0.9069)
+};
+\addlegendentry{T1 experimental}
+
+\end{axis}
+\end{tikzpicture}
+
+\caption{Speedup experimental de T1 frente al límite ideal de Amdahl. Elaboración propia.}
+\label{fig:speedup}
+\end{figure}
+
+La Fig.~\ref{fig:speedup} muestra que el comportamiento experimental no sigue
+el incremento esperado en un escenario ideal. Con dos executors el rendimiento
+cae de forma considerable. Al utilizar cuatro existe una recuperación, pero el
+tiempo sigue siendo superior al registrado con un solo executor.
+
+% Diagnóstico
+\section{Diagnóstico de la fracción no escalable}
+
+La métrica de Karp-Flatt permite estimar experimentalmente una fracción serial
+a partir del speedup observado y del número de unidades de procesamiento
+\cite{karpflatt1990}:
+
+\begin{equation}
+e=
+\frac{
+\dfrac{1}{S}
+-
+\dfrac{1}{N}
+}
+{
+1-\dfrac{1}{N}
+},
+\qquad N>1.
+\label{eq:karp}
+\end{equation}
+
+Para dos executors:
+
+\begin{align}
+e_2
+&=
+\frac{
+\dfrac{1}{0.3635}
+-
+\dfrac{1}{2}
+}
+{
+1-\dfrac{1}{2}
+} \\
+&\approx
+4.5026.
+\end{align}
+
+Para cuatro executors:
+
+\begin{align}
+e_4
+&=
+\frac{
+\dfrac{1}{0.9069}
+-
+\dfrac{1}{4}
+}
+{
+1-\dfrac{1}{4}
+} \\
+&\approx
+1.1369.
+\end{align}
+
+Los dos valores son superiores a uno. En estas condiciones no pueden
+interpretarse como una fracción serial física convencional, ya que el modelo
+está reflejando un escenario en el que el tiempo paralelo es peor que el tiempo
+de referencia.
+
+Además, $e$ disminuye de \num{4.5026} con dos executors a \num{1.1369} con
+cuatro. Por tanto, la pérdida observada no se comporta como una fracción serial
+constante. El resultado con dos executors está especialmente afectado por la
+variabilidad y la sobrecarga de la ejecución.
+
+\subsection{Sobrecarga observada}
+
+El primer mecanismo que puede relacionarse con los resultados es la
+planificación y coordinación del trabajo. Spark necesita preparar y distribuir
+las tareas antes de ejecutarlas, por lo que el nivel de paralelismo elegido
+puede afectar directamente al rendimiento. AutoExecutor estudia precisamente
+cómo distintas consultas Spark SQL requieren diferente cantidad de executors y
+cómo una selección inadecuada puede perjudicar el rendimiento
+\cite{sen2021}.
+
+El segundo mecanismo corresponde a la configuración de recursos. En el
+experimento, \texttt{spark.executor.instances},
+\texttt{spark.cores.max},
+\texttt{spark.sql.shuffle.partitions} y
+\texttt{spark.default.parallelism} cambian de acuerdo con $N$. Cheng et al.
+muestran que la configuración de Spark tiene una influencia suficiente sobre
+el rendimiento como para justificar métodos específicos de optimización de
+parámetros \cite{cheng2021}.
+
+El tercer elemento es la variabilidad observada en las propias mediciones. Con
+dos executors se registraron tiempos comprendidos entre aproximadamente
+\SI{0.275}{\second} y \SI{1.491}{\second}. Esta dispersión indica que la
+sobrecarga efectiva de la configuración no se mantuvo constante durante las
+cinco repeticiones.
+
+La eficiencia del paralelismo se determina mediante:
+
+\begin{equation}
+E(N)=\frac{S(N)}{N}.
+\label{eq:eficiencia}
+\end{equation}
+
+Para dos executors:
+
+\[
+E(2)=
+\frac{0.3635}{2}
+=
+0.1817.
+\]
+
+Para cuatro:
+
+\[
+E(4)=
+\frac{0.9069}{4}
+=
+0.2267.
+\]
+
+Por tanto, la eficiencia fue aproximadamente
+\SI{18.17}{\percent} con dos executors y
+\SI{22.67}{\percent} con cuatro. La segunda configuración presenta una mejora
+respecto a la primera, pero ambas permanecen lejos de un aprovechamiento ideal
+del paralelismo.
+
+% Integración al PFC
+\section{Propuesta de integración al PFC}
+
+En el PFC Tienda Tech, el procesamiento distribuido se propone para el análisis
+histórico de pedidos, ventas y movimientos de inventario. No se plantea su uso
+dentro del flujo transaccional encargado de registrar directamente una compra,
+porque dicho proceso requiere respuestas rápidas y trabaja con una cantidad
+reducida de información por solicitud.
+
+La integración se realizaría mediante procesamiento por lotes. Periódicamente
+se extraerían de PostgreSQL los registros históricos necesarios y se
+entregarían a un proceso Spark. Este proceso podría agrupar las ventas por
+producto y período, analizar el movimiento del inventario y generar indicadores
+de demanda.
+
+La salida sería almacenada como información analítica preparada para consulta.
+El módulo de reportes utilizaría estos resultados para evitar el procesamiento
+completo del histórico cada vez que un usuario solicite información.
+
+La decisión funcional soportada por esta integración sería la priorización de
+la reposición del inventario. A partir de los resultados podrían identificarse
+productos con alta demanda, bajo movimiento o necesidad de reposición.
+
+Se propone una ejecución por lotes porque este procesamiento no necesita
+realizarse durante la compra de un cliente. Su ejecución podría realizarse
+periódicamente cuando se haya acumulado nueva información suficiente.
+
+\begin{figure}[H]
+\centering
+
+\begin{tikzpicture}[
+    node distance=1.15cm,
+    every node/.style={
+        draw,
+        rounded corners,
+        align=center,
+        minimum width=3.4cm,
+        minimum height=0.9cm
+    },
+    >={Latex}
+]
+
+\node (micro) {Microservicios\\Tienda Tech};
+\node (postgres) [below=of micro] {PostgreSQL\\Datos operacionales};
+\node (extract) [below=of postgres] {Extracción\\por lotes};
+\node (spark) [below=of extract] {Apache Spark\\Procesamiento analítico};
+\node (result) [below=of spark] {Resultados\\analíticos};
+\node (report) [below=of result] {Reportes y apoyo\\a reposición};
+
+\draw[->] (micro) -- (postgres);
+\draw[->] (postgres) -- (extract);
+\draw[->] (extract) -- (spark);
+\draw[->] (spark) -- (result);
+\draw[->] (result) -- (report);
+
+\end{tikzpicture}
+
+\caption{Propuesta de integración del procesamiento distribuido en Tienda Tech. Elaboración propia.}
+\label{fig:arquitectura}
+\end{figure}
+
+Como se observa en la Fig.~\ref{fig:arquitectura}, Spark se ubica después de
+la persistencia de los datos operacionales. De esta forma, el análisis se
+mantiene separado de los microservicios responsables de las operaciones
+transaccionales.
+
+% Dimensionamiento
+\section{Dimensionamiento y viabilidad}
+
+El modelo propuesto para estimar la rentabilidad del procesamiento distribuido
+considera un tiempo secuencial:
+
+\[
+T_{\text{sec}}(n)=\alpha n,
+\]
+
+y un tiempo distribuido:
+
+\[
+T_{\text{dist}}(n)=
+\beta+
+\frac{\gamma n}{N}.
+\]
+
+El umbral se expresa mediante:
+
+\begin{equation}
+n^{*}=
+\frac{\beta}
+{\alpha-\dfrac{\gamma}{N}},
+\qquad
+\alpha>
+\frac{\gamma}{N}.
+\label{eq:umbral}
+\end{equation}
+
+Los parámetros $\alpha$, $\beta$ y $\gamma$ deben obtenerse mediante ajuste
+sobre mediciones realizadas con diferentes volúmenes de entrada. Los datos
+actuales de T1 corresponden a un único volumen de \num{500000} registros, por
+lo que no permiten identificar de manera independiente los tres parámetros del
+modelo.
+
+Por esta razón, con la evidencia disponible no se presenta un valor numérico
+de $n^{*}$. Calcularlo utilizando únicamente las configuraciones de uno, dos y
+cuatro executors implicaría utilizar variaciones de $N$ como si fueran
+variaciones del volumen $n$, lo cual no corresponde al modelo de la
+Ec.~\eqref{eq:umbral}.
+
+Para completar el dimensionamiento sería necesario ejecutar T1 con distintos
+tamaños de entrada manteniendo controladas las demás condiciones
+experimentales. Gulino et al. estudian la predicción del tiempo de ejecución
+de aplicaciones Spark considerando, entre otros elementos, el tamaño de los
+datos y los recursos empleados \cite{gulino2020}. De forma relacionada,
+Lattuada et al. analizan la asignación de recursos de aplicaciones Spark
+mediante modelos de rendimiento orientados a determinar la capacidad necesaria
+para alcanzar determinados objetivos de ejecución \cite{lattuada2020}.
+
+Mientras no se determine experimentalmente el umbral, para volúmenes similares
+a los evaluados se mantendría una solución basada en pandas o en consultas SQL,
+ya que T1 no presentó una ventaja de rendimiento mediante Spark.
+
+Para una futura implementación, el procesamiento distribuido se ejecutaría como
+una tarea independiente por lotes y no como un servicio que deba permanecer
+activo de forma permanente. Entre los principales riesgos se encuentran la
+variabilidad del rendimiento, el costo de mantener infraestructura adicional,
+un crecimiento de datos insuficiente para justificar Spark y la sincronización
+de información procedente de varios microservicios.
+
+% Postura crítica
+\section{Postura crítica y alternativas}
+
+Las mediciones disponibles indican que Spark no es actualmente la opción más
+eficiente para T1 con \num{500000} registros. pandas obtuvo una mediana de
+\SI{0.2119435}{\second}, mientras que Spark con cuatro executors necesitó
+\SI{0.3456639}{\second}. Esto produjo un speedup de \num{0.6131}.
+
+La evidencia experimental también muestra que aumentar la cantidad de
+executors no produjo una mejora progresiva. AutoExecutor señala que el nivel
+adecuado de paralelismo depende de la consulta ejecutada y que una cantidad
+inadecuada de executors puede perjudicar el rendimiento o el uso de recursos
+\cite{sen2021}. Esto coincide con el comportamiento observado en T1.
+
+Una primera alternativa es utilizar \textbf{pandas}. Para el volumen evaluado,
+esta opción obtuvo un tiempo menor y evita la coordinación requerida por un
+motor distribuido.
+
+La segunda alternativa consiste en utilizar \textbf{PostgreSQL} para
+operaciones de filtrado y agregación cuando el volumen pueda procesarse de
+forma adecuada en el servidor de base de datos. Esta opción evita introducir
+un componente adicional en la arquitectura para cargas que aún no requieren
+procesamiento distribuido.
+
+Spark se reservaría para escenarios donde el crecimiento de los históricos de
+pedidos, ventas e inventario supere la capacidad conveniente de una solución
+de un solo nodo. Antes de adoptarlo deberían realizarse nuevas pruebas con
+diferentes volúmenes para comprobar que el paralelismo compensa su sobrecarga.
+
+Por tanto, Spark puede considerarse una alternativa para el componente
+analítico futuro de Tienda Tech, pero las mediciones actuales no justifican
+utilizarlo para T1 bajo las condiciones evaluadas.
+
+% Conclusiones
+\section{Conclusiones}
+
+La transformación T1 no obtuvo una aceleración al incrementar el número de
+executors. Tomando como referencia Spark con un executor, el speedup fue
+\num{0.3635} con dos executors y \num{0.9069} con cuatro. Ambos valores fueron
+inferiores a uno, por lo que agregar recursos no redujo el tiempo respecto de
+la configuración base.
+
+La métrica de Karp-Flatt produjo valores de \num{4.5026} para dos executors y
+\num{1.1369} para cuatro. Estos resultados, junto con la dispersión de los
+tiempos observada con dos executors, indican que la ejecución estuvo fuertemente
+afectada por costos adicionales y que la pérdida de rendimiento no puede
+explicarse únicamente mediante una fracción serial constante.
+
+Finalmente, Spark tendría mayor sentido en Tienda Tech como componente de
+procesamiento por lotes para históricos de pedidos, ventas e inventario que
+como parte del flujo transaccional. Sin embargo, antes de adoptarlo debe
+determinarse experimentalmente el volumen a partir del cual la distribución
+resulta rentable mediante nuevas mediciones con distintos tamaños de entrada.
+
+% Uso de IA
+\section{Declaración de uso de inteligencia artificial generativa}
+
+Se utilizó ChatGPT como herramienta de apoyo para organizar el contenido del
+informe de acuerdo con la rúbrica, revisar la redacción técnica, comprobar
+operaciones matemáticas y apoyar la estructuración de tablas y figuras.
+
+Los datos experimentales no fueron generados mediante inteligencia artificial.
+Los tiempos utilizados proceden de las ejecuciones registradas en el
+repositorio PE-U4 del Equipo C. Las mediciones adicionales de T1 con uno y dos
+executors se encuentran identificadas en el commit declarado en este informe.
+
+Las conclusiones fueron elaboradas a partir de los resultados experimentales
+registrados y las referencias académicas utilizadas se incorporaron para
+respaldar únicamente las afirmaciones relacionadas con sus respectivos
+resultados y ámbitos de estudio.
+
+% Referencias
+\printbibliography
+
+\end{document}
