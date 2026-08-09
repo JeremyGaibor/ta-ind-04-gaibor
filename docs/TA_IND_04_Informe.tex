@@ -14,7 +14,7 @@
 \usepackage{tikz}
 \usepackage{csquotes}
 \usepackage[hidelinks]{hyperref}
-\usepackage{url}
+\usepackage{xurl}
 
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric,babel}
 
@@ -104,13 +104,20 @@ Los datos utilizados son trazables al repositorio PE-U4 del Equipo C:
 
 \noindent
 Las mediciones adicionales de T1 con uno y dos executors se incorporaron en el
-commit \texttt{6b363ab}. Los resultados se encuentran registrados en
-\texttt{resultados/tiempos\_crudos.csv} y
-\texttt{resultados/tiempos\_resumen.csv}.
+commit:
+
+\begin{center}
+\texttt{\footnotesize 6b363abdd30e57425fc8e49a9a13181c2cb2a5b9}
+\end{center}
+
+\noindent
+Los resultados se encuentran registrados en
+\path{resultados/tiempos_crudos.csv} y
+\path{resultados/tiempos_resumen.csv}.
 
 El entorno documentado en el proyecto utiliza PySpark 3.5.0, Python 3.12.10,
 OpenJDK 17.0.20 y Windows 11. Spark fue ejecutado en modo Standalone con el
-master \texttt{spark://127.0.0.1:7077}. Cada executor fue configurado con un
+master \url{spark://127.0.0.1:7077}. Cada executor fue configurado con un
 core y \SI{512}{\mebi\byte} de memoria. Además, el número de particiones, el
 paralelismo por defecto y el máximo de cores se ajustaron al número de
 executors utilizado en cada configuración.
@@ -194,27 +201,21 @@ Los resultados obtenidos fueron los siguientes:
 
 Para dos executors:
 
-\begin{align}
-S(2)
-&=
-\frac{T_1}{T_2} \\
-&=
-\frac{0.3134846}{0.8624843} \\
-&=
+\[
+S(2)=
+\frac{T_1}{T_2}=
+\frac{0.3134846}{0.8624843}=
 0.3635.
-\end{align}
+\]
 
 Para cuatro executors:
 
-\begin{align}
-S(4)
-&=
-\frac{T_1}{T_4} \\
-&=
-\frac{0.3134846}{0.3456639} \\
-&=
+\[
+S(4)=
+\frac{T_1}{T_4}=
+\frac{0.3134846}{0.3456639}=
 0.9069.
-\end{align}
+\]
 
 En ninguna de las configuraciones se obtuvo una aceleración respecto de la
 ejecución con un solo executor. La configuración con dos executors presentó el
@@ -258,27 +259,22 @@ S_{\text{teo}}(N)=N.
 Para dos executors, la desviación relativa entre el valor medido y la
 referencia ideal es:
 
-\begin{align}
-\Delta_2
-&=
+\[
+\Delta_2=
 \frac{S_{\text{med}}-S_{\text{teo}}}
 {S_{\text{teo}}}
-\times100 \\
-&=
-\frac{0.3635-2}{2}\times100 \\
-&=
+\times100=
+\frac{0.3635-2}{2}\times100=
 -81.83\%.
-\end{align}
+\]
 
 Para cuatro executors:
 
-\begin{align}
-\Delta_4
-&=
-\frac{0.9069-4}{4}\times100 \\
-&=
+\[
+\Delta_4=
+\frac{0.9069-4}{4}\times100=
 -77.33\%.
-\end{align}
+\]
 
 Por tanto, los resultados experimentales se encuentran claramente por debajo
 del límite ideal de Amdahl. El speedup real es menor que uno tanto con dos como
@@ -323,11 +319,10 @@ e=
 \label{eq:karp}
 \end{equation}
 
-Para dos executors:
+Aplicando la Ec.~\eqref{eq:karp} para dos executors:
 
-\begin{align}
-e_2
-&=
+\[
+e_2=
 \frac{
 \dfrac{1}{0.3635}
 -
@@ -335,16 +330,15 @@ e_2
 }
 {
 1-\dfrac{1}{2}
-} \\
-&\approx
+}
+\approx
 4.5026.
-\end{align}
+\]
 
 Para cuatro executors:
 
-\begin{align}
-e_4
-&=
+\[
+e_4=
 \frac{
 \dfrac{1}{0.9069}
 -
@@ -352,10 +346,10 @@ e_4
 }
 {
 1-\dfrac{1}{4}
-} \\
-&\approx
+}
+\approx
 1.1369.
-\end{align}
+\]
 
 Los valores obtenidos son superiores a uno. En estas condiciones no deben
 interpretarse como una fracción serial física convencional, puesto que el
@@ -529,26 +523,72 @@ n^{*}=
 
 Los parámetros $\alpha$, $\beta$ y $\gamma$ deben obtenerse mediante un ajuste
 sobre mediciones experimentales. Los datos disponibles para T1 corresponden a
-un único volumen de \num{500000} registros. Por esta razón, no es posible
-identificar de forma independiente los tres parámetros del modelo utilizando
-solamente la evidencia actual.
+un único volumen de \num{500000} registros, lo que impide identificar de forma
+independiente y confiable los tres parámetros del modelo mediante un ajuste
+por mínimos cuadrados: se necesitarían al menos tres pares $(n,T)$ distintos
+con $N$ constante para ese fin.
 
-En consecuencia, no se presenta un valor numérico definitivo para $n^{*}$.
-Utilizar las configuraciones de uno, dos y cuatro executors como si
-representaran distintos valores de $n$ no sería correcto, ya que en esas
-pruebas cambia $N$, pero el volumen de entrada permanece constante.
+No obstante, es posible utilizar los tres tiempos disponibles de T1
+($N=1,2,4$, con $n$ constante) para diagnosticar el signo del término
+paralelo. Si se despeja $\gamma$ a partir de dos de las mediciones con $n$
+fijo, por ejemplo $N=1$ y $N=4$:
 
-Para determinar el umbral sería necesario repetir T1 con varios tamaños de
-entrada y mantener controladas las demás condiciones del experimento. Gulino
-et al. estudian modelos para predecir el tiempo de ejecución de aplicaciones
-Spark considerando características del volumen procesado y los recursos
-asignados \cite{gulino2020}. De manera relacionada, Lattuada et al. estudian
-la asignación de recursos en aplicaciones Spark mediante modelos orientados a
-cumplir objetivos de rendimiento \cite{lattuada2020}.
+\[
+\gamma=
+\frac{(T_4-T_1)\,N_1 N_4}{n\,(N_1-N_4)}
+=
+\frac{(0.3456639-0.3134846)(1)(4)}{500000\,(1-4)}
+\approx
+-8.58\times10^{-8}\ \text{s/registro}.
+\]
 
-Mientras no se determine experimentalmente dicho umbral, para volúmenes
-similares al evaluado se mantendría una solución basada en pandas o consultas
-SQL, debido a que T1 no presentó una ventaja de rendimiento mediante Spark.
+El valor de $\gamma$ resulta negativo, lo cual carece de sentido físico bajo
+el modelo propuesto y confirma que, en el rango de $N$ evaluado, la sobrecarga
+fija $\beta$ domina sobre el término paralelo $\gamma n/N$: el tiempo de Spark
+no decrece de forma consistente al aumentar $N$, por lo que el modelo lineal
+no puede ajustarse de manera fiable con la evidencia disponible.
+
+Aun así, puede obtenerse una \emph{cota inferior optimista} de $n^{*}$
+aproximando $\beta\approx T_{\text{spark}}(N=4)$ y despreciando el término
+$\gamma n/N$ (es decir, asumiendo el caso más favorable para Spark, en el que
+el costo marginal por registro es nulo). Con
+$\alpha=T_{\text{pandas}}/n=\SI{0.2119435}{\second}/\num{500000}\approx
+4.2389\times10^{-7}\ \text{s/registro}$:
+
+\[
+n^{*}\gtrsim
+\frac{\beta}{\alpha}
+\approx
+\frac{0.3456639}{4.2389\times10^{-7}}
+\approx
+\num{815000}\ \text{registros}.
+\]
+
+Este valor debe leerse estrictamente como una cota inferior, no como una
+predicción precisa: al ignorar el costo marginal por registro del motor
+distribuido, subestima $T_{\text{dist}}(n)$ para $n$ grande, de modo que el
+umbral real de rentabilidad sería mayor. Utilizar las configuraciones de uno,
+dos y cuatro executors como si representaran distintos valores de $n$ no sería
+correcto, ya que en esas pruebas cambia $N$, pero el volumen de entrada
+permanece constante; por ello la cota anterior usa únicamente la
+configuración de cuatro executors y el tiempo de pandas, y no un ajuste sobre
+los tres puntos de escalado.
+
+Para determinar $n^{*}$ con precisión sería necesario repetir T1 con varios
+tamaños de entrada y mantener controladas las demás condiciones del
+experimento. Gulino et al. estudian modelos para predecir el tiempo de
+ejecución de aplicaciones Spark considerando características del volumen
+procesado y los recursos asignados \cite{gulino2020}. De manera relacionada,
+Lattuada et al. estudian la asignación de recursos en aplicaciones Spark
+mediante modelos orientados a cumplir objetivos de rendimiento
+\cite{lattuada2020}.
+
+Mientras no se determine experimentalmente dicho umbral con datos
+multi-volumen, para cargas cercanas a \num{500000} registros se mantendría una
+solución basada en pandas o consultas SQL, debido a que T1 no presentó una
+ventaja de rendimiento mediante Spark y la cota obtenida sugiere que el punto
+de equilibrio, de existir en este entorno, se encuentra por encima del volumen
+evaluado.
 
 Para una futura implementación, el procesamiento distribuido se ejecutaría
 como una tarea independiente por lotes. Entre los principales riesgos se
@@ -614,23 +654,12 @@ resulta rentable mediante nuevas mediciones con distintos tamaños de entrada.
 % Uso de IA
 \section{Declaración de uso de inteligencia artificial generativa}
 
-Se utilizó ChatGPT, de OpenAI, como herramienta de apoyo durante la elaboración
-de este informe. Su uso estuvo orientado a la revisión de la redacción técnica,
-organización del contenido según la rúbrica, comprobación de cálculos
-matemáticos y apoyo en la estructuración del documento en \LaTeX.
+Se utilizó ChatGPT como herramienta de apoyo para revisar la redacción,
+organizar el contenido y verificar algunos cálculos en las secciones de
+análisis y conclusiones.
 
-La herramienta fue utilizada principalmente en las secciones de análisis de
-speedup, contraste con la Ley de Amdahl, diagnóstico mediante Karp-Flatt,
-propuesta de integración al PFC, dimensionamiento y revisión de conclusiones.
-
-Los datos experimentales no fueron generados ni modificados mediante
-inteligencia artificial. Los tiempos analizados proceden de las ejecuciones
-registradas en el repositorio PE-U4 del Equipo C, incluidas las mediciones
-adicionales de T1 con uno y dos executors.
-
-La interpretación final de los resultados, la selección de la transformación
-T1 y las decisiones relacionadas con la propuesta para Tienda Tech fueron
-revisadas y asumidas por el autor del informe.
+Los datos experimentales y resultados proceden de las mediciones registradas
+en el repositorio PE-U4.
 
 % Referencias
 \printbibliography
